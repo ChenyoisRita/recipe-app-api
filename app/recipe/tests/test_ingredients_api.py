@@ -13,7 +13,7 @@ INGREDIENTS_URL = reverse('recipe:ingredient-list')
 
 
 class PublicIngredientsApiTests(TestCase):
-    """"Test the publicly available Ingredients API"""
+    """Test the publicly available ingredients API"""
 
     def setUp(self):
         self.client = APIClient()
@@ -26,12 +26,12 @@ class PublicIngredientsApiTests(TestCase):
 
 
 class PrivateIngredientsApiTests(TestCase):
-    """Test Ingredients can be retrieved by authorized user"""
+    """Test the private ingredients API"""
 
     def setUp(self):
         self.client = APIClient()
         self.user = get_user_model().objects.create_user(
-            'test@devapp.com',
+            'test@londonappdev.com',
             'testpass'
         )
         self.client.force_authenticate(self.user)
@@ -49,9 +49,9 @@ class PrivateIngredientsApiTests(TestCase):
         self.assertEqual(res.data, serializer.data)
 
     def test_ingredients_limited_to_user(self):
-        """Test that ingredients for the authenticated user are returned"""
+        """Test that ingredients for the authenticated user are returend"""
         user2 = get_user_model().objects.create_user(
-            'other@gmaildev.com',
+            'other@londonappdev.com',
             'testpass'
         )
         Ingredient.objects.create(user=user2, name='Vinegar')
@@ -62,3 +62,21 @@ class PrivateIngredientsApiTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data), 1)
         self.assertEqual(res.data[0]['name'], ingredient.name)
+
+    def test_create_ingredient_successful(self):
+        """Test create a new ingredient"""
+        payload = {'name': 'Cabbage'}
+        self.client.post(INGREDIENTS_URL, payload)
+
+        exists = Ingredient.objects.filter(
+            user=self.user,
+            name=payload['name'],
+        ).exists()
+        self.assertTrue(exists)
+
+    def test_create_ingredient_invalid(self):
+        """Test creating invalid ingredient fails"""
+        payload = {'name': ''}
+        res = self.client.post(INGREDIENTS_URL, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
